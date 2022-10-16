@@ -17,7 +17,7 @@ jobs:
           dotnet-version: '6.0.x' # SDK Version to use.
           source-url: https://nuget.pkg.github.com/<owner>/index.json
         env:
-          NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NUGET_AUTH_TOKEN: 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
       - run: dotnet build --configuration Release Zingoy.sln
       - name: Create the package
         run: dotnet pack --configuration Release Zingoy.sln

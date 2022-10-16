@@ -46,8 +46,10 @@ namespace zingoy.Controllers
 
             timer.Elapsed += new ElapsedEventHandler(GetDisc);
 
-            timer.Interval = 10000;
-            timer.Enabled = true;           
+            timer.Interval = 5000;
+            timer.Enabled = true;
+            //var resp =  await GetDisc();
+            //return resp;
 
         }
 
@@ -63,44 +65,60 @@ namespace zingoy.Controllers
                     new MediaTypeWithQualityHeaderValue("application/json"));
                 client.DefaultRequestHeaders.Add("authority", "www.zingoy.com");
                 client.DefaultRequestHeaders.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-                var abc = await client.GetAsync("https://www.zingoy.com/gift-cards/cleartrip");
-                var abc1 = await abc.Content.ReadAsStringAsync();
+                List<HtmlNode> programmerLinks = new List<HtmlNode>();
 
-                HtmlDocument htmlDoc = new HtmlDocument();
-                htmlDoc.LoadHtml(abc1);
-                var programmerLinks = htmlDoc.DocumentNode.Descendants("div")
-                        .Where(node => node.GetAttributeValue("class", "").Contains("shadow5 bgwhite pr mb10")).Take(10).ToList();
-                foreach (var item in programmerLinks)
+                int pageNum = 0;
+                do
                 {
-                    string? voucherCost = string.Empty;
-                    string? cashbackRate = string.Empty;
-                    var voucherValue = item.SelectSingleNode(".//div[@class='pt20 grid-10 tablet-grid-15 roboto-medium 100-zingcash grid-parent']")?.InnerText;
-                    var voucherCostList = (item.SelectNodes(".//div[@class='pt20 p5 grid-15 tablet-grid-10 roboto-medium']"));
-                    if (voucherCostList != null)
+                    ++pageNum;
+                    HttpResponseMessage response = new HttpResponseMessage();
+                    string responseRead = string.Empty;
+                    programmerLinks = new List<HtmlNode>();
+
+                    response = await client.GetAsync($"https://www.zingoy.com/gift-cards/cleartrip?page={pageNum}");
+                    responseRead = await response.Content.ReadAsStringAsync();
+
+                    HtmlDocument htmlDoc = new HtmlDocument();
+                    htmlDoc.LoadHtml(responseRead);
+                    programmerLinks = htmlDoc.DocumentNode.Descendants("div")
+                            .Where(node => node.GetAttributeValue("class", "").Contains("shadow5 bgwhite pr mb10")).ToList();
+                    foreach (var item in programmerLinks)
                     {
-                        voucherCost = voucherCostList[1]?.InnerText;
-                        cashbackRate = voucherCostList[0]?.InnerText;
+
+                        string? voucherCost = string.Empty;
+                        string? cashbackRate = string.Empty;
+                        var voucherValue = item.SelectSingleNode(".//div[@class='pt20 grid-10 tablet-grid-15 roboto-medium 100-zingcash grid-parent']")?.InnerText;
+                        var voucherCostList = (item.SelectNodes(".//div[@class='pt20 p5 grid-15 tablet-grid-10 roboto-medium']"));
+                        if (voucherCostList != null)
+                        {
+                            voucherCost = voucherCostList[1]?.InnerText;
+                            cashbackRate = voucherCostList[0]?.InnerText;
+                        }
+                        voucherValue = voucherValue?.Replace("\n", "").Replace(",", "").Replace("₹", "");
+                        voucherCost = voucherCost?.Replace("\n", "").Replace(",", "").Replace("₹", "");
+                        cashbackRate = cashbackRate?.Replace("\n", "").Replace("%", "").Trim();
+                        cashbackRate = string.IsNullOrEmpty(cashbackRate) ? "" : cashbackRate?.Substring(0, cashbackRate.IndexOf("."));
+                        voucherList.Add(new VoucherCost
+                        {
+                            VoucherValue = voucherValue,
+                            VoucherCosting = voucherCost,
+                            DiscountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Int32.Parse(cashbackRate),
+                            PageNum = pageNum
+                        });
                     }
-                    voucherValue = voucherCost?.Replace("\n", "").Replace(",", "").Replace("₹", "");
-                    voucherCost = voucherCost?.Replace("\n", "").Replace(",", "").Replace("₹", "");
-                    cashbackRate = cashbackRate?.Replace("\n", "").Replace("%", "").Trim();
-                    cashbackRate = string.IsNullOrEmpty(cashbackRate) ? "" : cashbackRate?.Substring(0, cashbackRate.IndexOf("."));
-                    voucherList.Add(new VoucherCost
-                    {
-                        VoucherValue = voucherValue,
-                        VoucherCosting = voucherCost,
-                        DiscountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Int32.Parse(cashbackRate)
-                    });
-                }
-                if (voucherList.Any(s => s.DiscountRate >= 5))
+
+                } while (programmerLinks?.Count >= 10);
+
+
+                if (voucherList.Any(s => s.DiscountRate >= 12))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                     //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 5).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 12).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {
-                        message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% \n";
+                        message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
                     }
                     var bot = new TelegramBotClient(apiToken);
                     var s = await bot.SendTextMessageAsync("-1001682879422", message);

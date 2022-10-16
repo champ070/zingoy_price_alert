@@ -5,5 +5,7 @@
         public string? VoucherValue { get; set; }
         public string? VoucherCosting { get; set; }
         public int? DiscountRate { get; set; }
+        public int? PageNum { get; set; }
+
     }
 }

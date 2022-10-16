@@ -46,7 +46,7 @@ namespace zingoy.Controllers
 
             timer.Elapsed += new ElapsedEventHandler(GetDisc);
 
-            timer.Interval = 3600;
+            timer.Interval = 10000;
             timer.Enabled = true;           
 
         }

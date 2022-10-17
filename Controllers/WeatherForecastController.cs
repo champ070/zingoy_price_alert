@@ -20,6 +20,7 @@ namespace zingoy.Controllers
     };
 
         private readonly ILogger<WeatherForecastController> _logger;
+        public int discountRate { get; set; }
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
@@ -40,8 +41,9 @@ namespace zingoy.Controllers
 
         [Route("getZingo")]
         [HttpGet]
-        public async Task GetZingoyPrice()
+        public async Task GetZingoyPrice([FromQuery] int _discountRate)
         {
+            discountRate = _discountRate;
             System.Timers.Timer timer = new System.Timers.Timer(10000);
 
             timer.Elapsed += new ElapsedEventHandler(GetDisc);
@@ -109,7 +111,6 @@ namespace zingoy.Controllers
 
                 } while (programmerLinks?.Count >= 10);
 
-
                 if (voucherList.Any(s => s.DiscountRate >= 15))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
@@ -123,7 +124,19 @@ namespace zingoy.Controllers
                     var bot = new TelegramBotClient(apiToken);
                     var s = await bot.SendTextMessageAsync("-1001682879422", message);
                 }
-
+                if (voucherList.Any(s => s.DiscountRate >= 11))
+                {
+                    string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
+                    //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 11).ToList();
+                    string message = string.Empty;
+                    foreach (var item in eligibleVoucher)
+                    {
+                        message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
+                    }
+                    var bot = new TelegramBotClient(apiToken);
+                    var s = await bot.SendTextMessageAsync("-816145363", message);
+                }
                 //return voucherList;
             }
             catch (Exception ex)

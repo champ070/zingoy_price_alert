@@ -50,7 +50,7 @@ namespace zingoy.Controllers
 
             timer.Interval = 5000;
             timer.Enabled = true;
-            //GC.KeepAlive(timer);
+            GC.KeepAlive(timer);
             //var resp =  await GetDisc();
             //return resp;
 

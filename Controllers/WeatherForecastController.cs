@@ -44,11 +44,11 @@ namespace zingoy.Controllers
         public async Task GetZingoyPrice([FromQuery] int _discountRate)
         {
             discountRate = _discountRate;
-            System.Timers.Timer timer = new System.Timers.Timer(10000);
+            System.Timers.Timer timer = new System.Timers.Timer();
 
-            timer.Elapsed += new ElapsedEventHandler(GetDisc);
+            timer.Elapsed += GetDisc;
 
-            timer.Interval = 5000;
+            timer.Interval = 10000;
             timer.Enabled = true;
             GC.KeepAlive(timer);
             //var resp =  await GetDisc();

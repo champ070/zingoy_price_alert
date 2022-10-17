@@ -50,6 +50,7 @@ namespace zingoy.Controllers
 
             timer.Interval = 5000;
             timer.Enabled = true;
+            GC.KeepAlive(timer);
             //var resp =  await GetDisc();
             //return resp;
 
@@ -124,11 +125,11 @@ namespace zingoy.Controllers
                     var bot = new TelegramBotClient(apiToken);
                     var s = await bot.SendTextMessageAsync("-1001682879422", message);
                 }
-                if (voucherList.Any(s => s.DiscountRate >= 11))
+                if (voucherList.Any(s => s.DiscountRate >= 10))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                     //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 11).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 10).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {

@@ -103,18 +103,19 @@ namespace zingoy.Controllers
 
                     } while (programmerLinks?.Count >= 10);
 
-                    if (voucherList.Any(s => s.DiscountRate >= 15))
+                    if (voucherList.Any(s => s.DiscountRate >= 10))
                     {
                         string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                         //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                        var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 15).ToList();
+                        var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 10).ToList();
                         string message = string.Empty;
                         foreach (var item in eligibleVoucher)
                         {
                             message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
                         }
+                        var linkToBuy = "https://www.zingoy.com/gift-cards/cleartrip?=1666083329714&page=1&sort_by=discount";
                         var bot = new TelegramBotClient(apiToken);
-                        var s = await bot.SendTextMessageAsync("-1001682879422", message);
+                        var s = await bot.SendTextMessageAsync("-1001682879422", message + "\n \n" + linkToBuy);
                     }
                     if (voucherList.Any(s => s.DiscountRate >= 10))
                     {
@@ -126,8 +127,9 @@ namespace zingoy.Controllers
                         {
                             message = message + $"---------------{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
                         }
+                        var linkToBuy = "https://www.zingoy.com/gift-cards/cleartrip?=1666083329714&page=1&sort_by=discount";
                         var bot = new TelegramBotClient(apiToken);
-                        var s = await bot.SendTextMessageAsync("-816145363", message);
+                        var s = await bot.SendTextMessageAsync("-816145363", message + "\n \n" + linkToBuy);
                     }
                     //return voucherList;
                 }

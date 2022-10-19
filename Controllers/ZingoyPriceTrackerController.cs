@@ -89,23 +89,23 @@ namespace zingoy.Controllers
                         voucherValue = voucherValue?.Replace("\n", "").Replace(",", "").Replace("₹", "");
                         voucherCost = voucherCost?.Replace("\n", "").Replace(",", "").Replace("₹", "");
                         cashbackRate = cashbackRate?.Replace("\n", "").Replace("%", "").Trim();
-                        cashbackRate = string.IsNullOrEmpty(cashbackRate) ? "" : cashbackRate?.Substring(0, cashbackRate.IndexOf("."));
+                        //cashbackRate = string.IsNullOrEmpty(cashbackRate) ? "" : cashbackRate?.Substring(0, cashbackRate.IndexOf("."));
                         voucherList.Add(new VoucherCost
                         {
                             VoucherValue = voucherValue,
                             VoucherCosting = voucherCost,
-                            DiscountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Int32.Parse(cashbackRate),
+                            DiscountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Decimal.Parse(cashbackRate),
                             PageNum = pageNum
                         });
                     }
 
                 } while (programmerLinks?.Count >= 10);
 
-                if (voucherList.Any(s => s.DiscountRate >= 15))
+                if (voucherList.Any(s => s.DiscountRate >= new decimal(12.5)))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                     //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 15).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(12.5)).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {
@@ -115,15 +115,15 @@ namespace zingoy.Controllers
                     var bot = new TelegramBotClient(apiToken);
                     var s = await bot.SendTextMessageAsync("-1001682879422", message + "\n \n" + linkToBuy);
                 }
-                if (voucherList.Any(s => s.DiscountRate >= 10))
+                if (voucherList.Any(s => s.DiscountRate >= new decimal(10.03)))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                     //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= 10).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(10.03)).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {
-                        message = message + $"---------------{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
+                        message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
                     }
                     var linkToBuy = "https://www.zingoy.com/gift-cards/cleartrip?=1666083329714&page=1&sort_by=discount";
                     var bot = new TelegramBotClient(apiToken);

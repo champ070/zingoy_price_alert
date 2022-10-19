@@ -101,11 +101,11 @@ namespace zingoy.Controllers
 
                 } while (programmerLinks?.Count >= 10);
 
-                if (voucherList.Any(s => s.DiscountRate >= new decimal(10.5)))
+                if (voucherList.Any(s => s.DiscountRate >= new decimal(12.5)))
                 {
                     string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
                     //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(10.5)).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(12.5)).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {

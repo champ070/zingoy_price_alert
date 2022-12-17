@@ -2,7 +2,9 @@
 {
     public class InputModel
     {
-        public string endPoint { get; set; }
+        public decimal DiscountRate { get; set; }
+        public double Interval { get; set; }
+        public string HeaderCookie { get; set; }
 
     }
 }

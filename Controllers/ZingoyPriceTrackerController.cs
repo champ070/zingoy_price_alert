@@ -11,76 +11,87 @@ namespace zingoy.Controllers
     [Route("[controller]")]
     public class ZingoyPriceTrackerController : ControllerBase
     {
-        //public ZingoyRepository _zingoyRepository = new ZingoyRepository();
+        static System.Timers.Timer timer = new System.Timers.Timer();
+        private readonly static string zingoyCleartripGCUrl = "https://www.zingoy.com/gift-cards/cleartrip";
+        private readonly static string headerMediaType = "application/json";
+        private readonly static string headerKeyAuthority = "authority";
+        private readonly static string headerValueAuthority = "www.zingoy.com";
+        private readonly static string headerKeyAccept = "accept";
+        private readonly static string headerValueAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+        private readonly static string apiTokenCleartripVoucherAlert = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
+        private readonly static string chatIdCleartripVoucherAlert = "-1001682879422";
+        
+        
         public ZingoyPriceTrackerController()
         {
-            //_zingoyRepository = zingoyRepository;
 
         }
 
         [Route("getZingo")]
         [HttpGet]
-        public async Task GetZingoyPrice()
-        {
-            //_zingoyRepository.SendTelegramMsgIfDiscountISMoreAsync
-            //GetDisc();
-            System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Elapsed += GetDisc;
-
-            timer.Interval = 10000;
+        public async Task GetZingoyPrice([FromQuery] InputModel inputModel)
+        {  
+            timer.Elapsed += (sender, e) => GetDisc(sender, e, inputModel.DiscountRate, inputModel.HeaderCookie);
+            timer.Interval = inputModel.Interval * 1000;
             timer.Enabled = true;
-            //if (count > 5)
-            //{
-            //    timer.Stop();
-            //    timer.Start();
-            //}
             GC.KeepAlive(timer);
-            //var resp =  await GetDisc();
-            //return resp;
-
         }
-
-        //[Route("getZingoy")]
-        //[HttpGet]
-        public async static void GetDisc(object source, ElapsedEventArgs e)
+        public async static void GetDisc(object? source, ElapsedEventArgs e, decimal rate, string headerCookie)
         {
-            bool runInfinite = true;
-
             List<VoucherCost> voucherList = new List<VoucherCost>();
+            List<HtmlNode> programmerLinks = new List<HtmlNode>();
             int pageNum = 0;
-            string url = "https://www.zingoy.com/gift-cards/cleartrip?page=";
+            bool breakLoop = false;
+
             try
             {
                 HttpClient client = new HttpClient();
-                client.BaseAddress = new Uri("https://www.zingoy.com/gift-cards/cleartrip");
+
+                #region --- client to fetch GC clearttrip ---
+
+                client.BaseAddress = new Uri(zingoyCleartripGCUrl);
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue("application/json"));
-                client.DefaultRequestHeaders.Add("authority", "www.zingoy.com");
-                client.DefaultRequestHeaders.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-                List<HtmlNode> programmerLinks = new List<HtmlNode>();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(headerMediaType));
+                client.DefaultRequestHeaders.Add(headerKeyAuthority, headerValueAuthority);
+                client.DefaultRequestHeaders.Add(headerKeyAccept, headerValueAccept);
+                #endregion --- client to fetch GC clearttrip ---               
 
                 
                 do
                 {
                     ++pageNum;
+                    
                     HttpResponseMessage response = new HttpResponseMessage();
                     string responseRead = string.Empty;
                     programmerLinks = new List<HtmlNode>();
-                    response = await client.GetAsync($"{url}{pageNum}");
+                    response = await client.GetAsync($"{zingoyCleartripGCUrl}?&page={pageNum}&sort_by=discount");
                     responseRead = await response.Content.ReadAsStringAsync();
 
                     HtmlDocument htmlDoc = new HtmlDocument();
                     htmlDoc.LoadHtml(responseRead);
                     programmerLinks = htmlDoc.DocumentNode.Descendants("div")
                             .Where(node => node.GetAttributeValue("class", "").Contains("shadow5 bgwhite pr mb10")).ToList();
+
                     foreach (var item in programmerLinks)
                     {
-
                         string? voucherCost = string.Empty;
                         string? cashbackRate = string.Empty;
                         var voucherValue = item.SelectSingleNode(".//div[@class='pt20 grid-10 tablet-grid-15 roboto-medium 100-zingcash grid-parent']")?.InnerText;
                         var voucherCostList = (item.SelectNodes(".//div[@class='pt20 p5 grid-15 tablet-grid-10 roboto-medium']"));
+
+                        int startIndex = item.InnerHtml.IndexOf("product_id");
+                        int endIndex = 0;
+                        int diff = "product_id".Length + 1;
+                        string productid = string.Empty;
+                        if (startIndex > 0)
+                        {
+                            endIndex = item.InnerHtml.IndexOf(">", startIndex);
+                        }
+                           
+                        if (startIndex > 0 && startIndex < endIndex)
+                        {
+                            productid = item.InnerHtml.Substring(startIndex + diff, endIndex - startIndex - diff - 1);
+                        }
                         if (voucherCostList != null)
                         {
                             voucherCost = voucherCostList[1]?.InnerText;
@@ -89,47 +100,59 @@ namespace zingoy.Controllers
                         voucherValue = voucherValue?.Replace("\n", "").Replace(",", "").Replace("₹", "");
                         voucherCost = voucherCost?.Replace("\n", "").Replace(",", "").Replace("₹", "");
                         cashbackRate = cashbackRate?.Replace("\n", "").Replace("%", "").Trim();
-                        //cashbackRate = string.IsNullOrEmpty(cashbackRate) ? "" : cashbackRate?.Substring(0, cashbackRate.IndexOf("."));
+                        var discountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Decimal.Parse(cashbackRate);
                         voucherList.Add(new VoucherCost
                         {
                             VoucherValue = voucherValue,
                             VoucherCosting = voucherCost,
-                            DiscountRate = string.IsNullOrEmpty(cashbackRate) ? 0 : Decimal.Parse(cashbackRate),
-                            PageNum = pageNum
+                            DiscountRate = discountRate,
+                            PageNum = pageNum,
+                            ProductId = productid
                         });
+                        if(discountRate < rate && !string.IsNullOrEmpty(productid))
+                        {
+                            breakLoop = true;
+                            break;
+                        }
                     }
 
-                } while (programmerLinks?.Count >= 10);
+                } while (programmerLinks?.Count >= 10 && pageNum < 6 && !breakLoop);
 
-                if (voucherList.Any(s => s.DiscountRate >= new decimal(12.5)))
+                if (voucherList.Any(s => s.DiscountRate >= rate))
                 {
-                    string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
-                    //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(12.5)).ToList();
+                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= rate).ToList();
                     string message = string.Empty;
                     foreach (var item in eligibleVoucher)
                     {
                         message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
+                        if (!string.IsNullOrEmpty(headerCookie))
+                        {
+                            try
+                            {
+                                HttpClientHandler handler = new HttpClientHandler();
+                                var urladd = $"https://www.zingoy.com/add_to_cart?from_page=buy_gift_cards&product_id={item.ProductId}";
+
+                                HttpClient clientForAddCart = new HttpClient();
+                                clientForAddCart.BaseAddress = new Uri(urladd);
+                                clientForAddCart.DefaultRequestHeaders.Accept.Clear();
+                                clientForAddCart.DefaultRequestHeaders.Add("authority", "www.zingoy.com");
+                                clientForAddCart.DefaultRequestHeaders.Add("accept", "*/*;q=0.5, text/javascript, application/javascript, application/ecmascript, application/x-ecmascript");
+                                clientForAddCart.DefaultRequestHeaders.Add("cookie", headerCookie);
+                                HttpResponseMessage responseForAddCart = new HttpResponseMessage();
+                                var requestForAddCart = new HttpRequestMessage(HttpMethod.Post, clientForAddCart.BaseAddress);
+                                responseForAddCart = await clientForAddCart.SendAsync(requestForAddCart);
+                            }
+                            catch (Exception ex)
+                            {
+                                continue;
+                            }
+                        }
                     }
                     var linkToBuy = "https://www.zingoy.com/gift-cards/cleartrip?=1666083329714&page=1&sort_by=discount";
-                    var bot = new TelegramBotClient(apiToken);
-                    var s = await bot.SendTextMessageAsync("-1001682879422", message + "\n \n" + linkToBuy);
+                    var bot = new TelegramBotClient(apiTokenCleartripVoucherAlert);
+                    var s = await bot.SendTextMessageAsync(chatIdCleartripVoucherAlert, message + "\n \n" + linkToBuy);
+                    
                 }
-                if (voucherList.Any(s => s.DiscountRate >= new decimal(10.03)))
-                {
-                    string apiToken = "5789194115:AAGtKf1vCr6dDbp-CiEG7qy5JOBHXGbL15w";
-                    //string urlString = $"https://api.telegram.org/bot{apiToken}/sendMessage?chat_id={"-1001682879422"}&text={"test"}";
-                    var eligibleVoucher = voucherList.Where(s => s.DiscountRate >= new decimal(10.03)).ToList();
-                    string message = string.Empty;
-                    foreach (var item in eligibleVoucher)
-                    {
-                        message = message + $"{item.VoucherValue} is availabe at {item.DiscountRate}% on page num {item.PageNum} \n";
-                    }
-                    var linkToBuy = "https://www.zingoy.com/gift-cards/cleartrip?=1666083329714&page=1&sort_by=discount";
-                    var bot = new TelegramBotClient(apiToken);
-                    var s = await bot.SendTextMessageAsync("-816145363", message + "\n \n" + linkToBuy);
-                }
-                //return voucherList;
             }
             catch (Exception ex)
             {
@@ -138,7 +161,6 @@ namespace zingoy.Controllers
                     VoucherValue = ex.Message,
                     VoucherCosting = "a"
                 });
-                //return voucherList;
             }
 
         }

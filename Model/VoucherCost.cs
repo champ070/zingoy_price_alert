@@ -6,6 +6,7 @@
         public string? VoucherCosting { get; set; }
         public decimal? DiscountRate { get; set; }
         public int? PageNum { get; set; }
+        public string ProductId { get; set; }
 
     }
 }
